@@ -478,8 +478,10 @@ LocationID *conditionalvertex(int* exception, int *numLocations, LocationID from
          i = 0;
          for (j = 0; radius[j][0] != -1; j++){
             for (currRadius = 0; radius[j][currRadius] != -1; currRadius++){
-            ID[i] = radius[j][currRadius];
-            i++;
+               if (exception[radius[j][currRadius]] != 1) {
+                  ID[i] = radius[j][currRadius];
+                  i++;
+               }
             }
          }
         
@@ -503,8 +505,11 @@ LocationID *conditionalvertex(int* exception, int *numLocations, LocationID from
       }
        
    }
-   ID[i] = from; 
-   *numLocations = ++i;
+   if (i == 0 && road == 1) {
+      ID[i] = from;
+      i++;
+   }
+   *numLocations = i;
    disposeMap(m);
    return ID;
 }
@@ -513,35 +518,35 @@ int aobs(LocationID from, LocationID to,int rail_hops,LocationID *path)
 {
    int i = 0;
    int j = 0;
-	LocationID visited[NUM_MAP_LOCATIONS] = {0};
-	LocationID parent[NUM_MAP_LOCATIONS];
-	for (i = 0; i < NUM_MAP_LOCATIONS; i++) parent[i] = -1;
+   LocationID visited[NUM_MAP_LOCATIONS] = {0};
+   LocationID parent[NUM_MAP_LOCATIONS];
+   for (i = 0; i < NUM_MAP_LOCATIONS; i++) parent[i] = -1;
     Map m = newMap();
-	
-	LocationID location[NUM_MAP_LOCATIONS][NUM_MAP_LOCATIONS];
-	for (i = 0; i < NUM_MAP_LOCATIONS; i++){
-		for (j = 0; j < NUM_MAP_LOCATIONS; j++){
-			location[i][j] = -1;
-		}
-	}
-	int currnum = 1;
-	int nextnum = 0;
+   
+   LocationID location[NUM_MAP_LOCATIONS][NUM_MAP_LOCATIONS];
+   for (i = 0; i < NUM_MAP_LOCATIONS; i++){
+      for (j = 0; j < NUM_MAP_LOCATIONS; j++){
+         location[i][j] = -1;
+      }
+   }
+   int currnum = 1;
+   int nextnum = 0;
    location[0][0] = from;
    int radius = 0;
    while (!inSideArray(to,location[radius],currnum)){
-    	 i = 0;
-    	 nextnum = 0;
-		 while (i < currnum) { 
-		   nextnum += effiBFS(location[radius][i],rail_hops,location[radius+1]+nextnum,parent,visited);
+       i = 0;
+       nextnum = 0;
+       while (i < currnum) { 
+         nextnum += effiBFS(location[radius][i],rail_hops,location[radius+1]+nextnum,parent,visited);
          i++;
-		 }
+       }
        rail_hops = (rail_hops+1)%4;
-		 currnum = nextnum;
-		 radius++;	
-	}
-	
+       currnum = nextnum;
+       radius++;  
+   }
+   
     parent[from] = -1;
-	 int nLocations;
+    int nLocations;
     int currv = to;
     for (nLocations = 0; parent[currv] != -1; currv = parent[currv]){
        nLocations++;
@@ -644,5 +649,24 @@ static int inSideArray(int target,int *a,int size){
    printf("\n");
 }*/
 
-
-
+//Roger 10/16/2014
+void Drac_whereCanIGo(LocationID *canGo, int *nCanGo, LocationID from, int road, int sea) {
+   int pos = 0, num = 0;
+   Map m = newMap();
+   VList current;
+   current = m->connections[from];
+   for(; current != NULL; current = current->next) {
+      if (current->v != ST_JOSEPH_AND_ST_MARYS) {
+         if (road == 1 && current->type == ROAD) {
+            canGo[pos] = current->v;
+            pos++;
+            num++;
+         } else if (sea == 1 && current->type == SEA) {
+            canGo[pos] = current->v;
+            pos++;
+            num++;
+         }
+      }
+   }
+   *nCanGo = num;
+}

@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
+//#include <time.h>
 #include "Game.h"
 #include "Map.h"
 #include "DracView.h"
@@ -17,7 +17,7 @@
 //UPDATE: ALPHA
 static LocationID drac_nextLocation(DracView gameState, LocationID destination);
 static LocationID drac_idealPlace(DracView gameState);
-static LocationID drac_randomPlace(DracView gameState);
+//static LocationID drac_randomPlace(DracView gameState);
 static LocationID drac_autoNextMove(DracView gameState);
 static int drac_duplicated(LocationID trail[TRAIL_SIZE]);
 static int drac_isLegalMove(DracView gameState, LocationID destination);
@@ -25,7 +25,7 @@ static void map_howManyStep(DracView gameState, int steps[NUM_MAP_LOCATIONS]);
 
 void decideDraculaMove(DracView gameState)
 {
-   srand(time(NULL));
+   //srand(time(NULL));
    //0   Step: List out frequently used variable;
    Round game_round = giveMeTheRound(gameState);
 
@@ -39,8 +39,8 @@ void decideDraculaMove(DracView gameState)
       placeToGo = drac_autoNextMove(gameState);
    }
 
-	// Replace the line below by something better
-	registerBestPlay(idToabbrev(placeToGo), "LarDracula Alpha!");
+   // Replace the line below by something better
+   registerBestPlay(idToabbrev(placeToGo), "10/16/2014 3:04PM");
    #ifdef DEBUG
    LocationID trail[TRAIL_SIZE];
    giveMeTheTrail(gameState, PLAYER_DRACULA, trail);
@@ -79,26 +79,31 @@ static LocationID drac_idealPlace(DracView gameState) {
    return idealPlace;
 }
 
-static LocationID drac_randomPlace(DracView gameState) {
+/*static LocationID drac_randomPlace(DracView gameState) {
    LocationID *places;
    int numPlaces, numRandom;
    places = whereCanIgo(gameState, &numPlaces, TRUE, FALSE);
    numRandom = rand() % numPlaces;
    return places[numRandom];
 }
-
+*/
 static LocationID drac_autoNextMove(DracView gameState) {
+   LocationID myLocation = whereIs(gameState, PLAYER_DRACULA);
    LocationID idealDes = drac_nextLocation(gameState, drac_idealPlace(gameState));
-   LocationID finalDes = idealDes;
-   #ifdef DEBUG
-   printf("idealDes = %d\n", idealDes);
-   printf("isLegal  = %d\n", drac_isLegalMove(gameState, idealDes));
-   #endif
+   LocationID finalDes;
+   LocationID *placeICanReach = malloc(sizeof(LocationID) * NUM_MAP_LOCATIONS);
+   int numLocations, i, isLegal = FALSE;
+   //IF I CAN MOVE TO THE IDEAL PLACES
    if (drac_isLegalMove(gameState, idealDes)) {
+      finalDes = idealDes;
    } else {
-      while((finalDes = drac_randomPlace(gameState)) &&
-             !drac_isLegalMove(gameState, finalDes));
-   }
+      Drac_whereCanIGo(placeICanReach, &numLocations, myLocation, TRUE, TRUE);
+      for (i = 0; i < numLocations && isLegal == FALSE; i++) {
+         finalDes = placeICanReach[i];
+         isLegal = drac_isLegalMove(gameState, finalDes);
+         }
+      }
+   free(placeICanReach);
    return finalDes;
 }
 
@@ -106,7 +111,7 @@ static int drac_duplicated(LocationID trail[TRAIL_SIZE]) {
    int i, j, duplicate = 0;
    for (i = 0; i < TRAIL_SIZE-1; i++) {
       for (j = i + 1; j < TRAIL_SIZE; j++) {
-         if (trail[i] == trail[j] && trail[i] != -1 && trail[j] != -1) {
+         if (trail[i] != -1 && trail[j] != -1 && trail[i] == trail[j]) {
             duplicate++;
          }
       }
@@ -129,7 +134,6 @@ static int drac_isLegalMove(DracView gameState, LocationID destination) {
    if (drac_duplicated(trail) == 0) {
       isLegal = TRUE;
    } else {
-      
       isLegal = FALSE;
    }
    #ifdef DEBUG

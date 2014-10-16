@@ -114,24 +114,26 @@ void giveMeTheTrail(HunterView currentView, PlayerID player,
 //// Functions that query the map to find information about connectivity
 
 // What are my possible next moves (locations)
-LocationID *whereCanIgo(HunterView currentView, int *numLocations, int road,int rail, int sea)
+LocationID *whereCanPlayerGo(HunterView currentView, int *numLocations, PlayerID player, int road,int rail, int sea)
 {
-    LocationID exception[NUM_MAP_LOCATIONS] = {0}; 
-    int me  = whoAmI(currentView);  
-    int rail_hops = (currentView->round + me)%4; 
-    LocationID * a = conditionalvertex(exception,numLocations,whereIs(currentView,me),rail_hops,road,rail,sea);
+    LocationID exception[NUM_MAP_LOCATIONS] = {0};
+    // Exception - player's current location... so the player doesnt stand still
+    LocationID currentLocation = whereIs(currentView, player);
+    exception[currentLocation] = 1;
+    int rail_hops = (currentView->round + player)%4; 
+    LocationID *a = conditionalvertex(exception,numLocations,whereIs(currentView, player),rail_hops,road,rail,sea);
     return a;
 }
 
 // What are the specified player's next possible moves
-LocationID *whereCanTheyGo(HunterView currentView, int *numLocations,
-                           PlayerID player, int road, int rail, int sea)
-{
-    LocationID exception[NUM_MAP_LOCATIONS] = {0}; 
-    int rail_hops = (currentView->round + player)%4;   
-    LocationID * a = conditionalvertex(exception,numLocations,whereIs(currentView,player),rail_hops,road,rail,sea);
-    return a;
-}
+// LocationID *whereCanTheyGo(HunterView currentView, int *numLocations,
+//                            PlayerID player, int road, int rail, int sea)
+// {
+//     LocationID exception[NUM_MAP_LOCATIONS] = {0};
+//     int rail_hops = (currentView->round + player)%4;   
+//     LocationID * a = conditionalvertex(exception,numLocations,whereIs(currentView,player),rail_hops,road,rail,sea);
+//     return a;
+// }
 
 static void get_turn (HunterView g, char *pastPlays) {
    int stringLength;

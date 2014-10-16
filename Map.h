@@ -27,4 +27,8 @@ int shortestPath (LocationID* path,LocationID start,LocationID end,int isHunter,
 // I don't know how to name it. This function does shortest path taking into account of passing more than 1 station
 int aobs(LocationID from, LocationID to,int rail_hops,LocationID *path);
 
+//dracula's function
+void Drac_whereCanIGo(LocationID *canGo, int *nCanGo, LocationID from, int road, int sea);
+
+
 #endif

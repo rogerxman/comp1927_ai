@@ -97,7 +97,7 @@ void giveMeTheTrail(HunterView currentView, PlayerID player,
 // The array can be in any order but must contain unique entries
 // The current location should be included in the array (could rest)
 
-LocationID *whereCanIgo(HunterView currentView, int *numLocations,int rail, int road, int sea);
+LocationID *whereCanPlayerGo(HunterView currentView, int *numLocations, PlayerID player, int rail, int road, int sea);
 
 // whereCanTheyGo() returns an array of LocationIDs giving all of the
 //   locations that the given Player could reach from their current location
@@ -109,8 +109,8 @@ LocationID *whereCanIgo(HunterView currentView, int *numLocations,int rail, int 
 //   know Dracula's location precisely
 // The player's current location should be included in the array (could rest)
 
-LocationID *whereCanTheyGo(HunterView currentView, int *numLocations,
-                           PlayerID player, int road, int rail, int sea);
+// LocationID *whereCanTheyGo(HunterView currentView, int *numLocations,
+//                            PlayerID player, int road, int rail, int sea);
 
 LocationID goStraightTo (LocationID from, LocationID to);
 int efficientPath (HunterView g,LocationID* path,LocationID to);

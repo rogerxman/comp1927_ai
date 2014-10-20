@@ -1,11 +1,10 @@
 // dracula.c
 // Implementation of your "Fury of Dracula" Dracula AI
 // By: Roger Tsang
-// Version: Alpha
+// Version: Beta
 
 #include <stdlib.h>
 #include <stdio.h>
-//#include <time.h>
 #include "Game.h"
 #include "Map.h"
 #include "DracView.h"
@@ -14,22 +13,33 @@
 //#define DEBUG
 
 #define SIZE_TAUNT MESSAGE_SIZE
-#define NUM_HUNTER 4
+#define DOUBLE_BACK_0 102
+#define NUM_HUNTER  4
+#define UNASSIGNED -1
+#define ERROR      -2
 
 //UPDATE: ALPHA
 static LocationID drac_nextLocation(DracView gameState, LocationID destination);
 static LocationID drac_idealPlace(DracView gameState);
 //static LocationID drac_randomPlace(DracView gameState);
 static LocationID drac_autoNextMove(DracView gameState);
-static int drac_duplicated(LocationID trail[TRAIL_SIZE]);
-static int drac_isLegalMove(DracView gameState, LocationID destination);
+//static int drac_duplicated(LocationID trail[TRAIL_SIZE]);
+//static int drac_isLegalMove(DracView gameState, LocationID destination);
 static void map_howManyStep(DracView gameState, int steps[NUM_MAP_LOCATIONS]);
 
-//UPDATE: SHIT THAT BOAT AND SEA, FREAKING CONFUSING!
+//UPDATE: BETA
+//STRATEGE: ENABLE HI D1 D2 D3 D4 D5
+//COMMENT: I COMBINED drac_duplicated and drac_isLegalMove to drac_autoHIDX
+static LocationID drac_hasHI(LocationID trail[TRAIL_SIZE]);
+static LocationID drac_hasDX(LocationID trail[TRAIL_SIZE]);
+static LocationID drac_autoHIDX(LocationID trail[TRAIL_SIZE], LocationID input);
+static LocationID drac_drunk(LocationID trail[TRAIL_SIZE], LocationID currentLocation);
 
 void decideDraculaMove(DracView gameState)
 {
-   //srand(time(NULL));
+   #ifdef DEBUG
+   printf("decideDraculaMove\n");
+   #endif
    //0   Step: List out frequently used variable;
    Round game_round = giveMeTheRound(gameState);
 
@@ -43,33 +53,41 @@ void decideDraculaMove(DracView gameState)
       placeToGo = drac_autoNextMove(gameState);
    }
 
-   // Replace the line below by something better
-   registerBestPlay(idToabbrev(placeToGo), "10/17/2014 4:39PM");
-   #ifdef DEBUG
-   LocationID trail[TRAIL_SIZE];
-   giveMeTheTrail(gameState, PLAYER_DRACULA, trail);
-   int i;
-   for (i = 0; i < TRAIL_SIZE; i++) {
-      printf("[%d]\t",trail[i]);
+   //3rd Step: Transformer
+   if (placeToGo >= MIN_MAP_LOCATION && placeToGo <= MAX_MAP_LOCATION) {
+      registerBestPlay(idToabbrev(placeToGo), "Dracula");      
+   } else {
+      switch(placeToGo) {
+         case HIDE: registerBestPlay("HI", "Dracula"); break;
+         case DOUBLE_BACK_1: registerBestPlay("D1", "Dracula"); break;
+         case DOUBLE_BACK_2: registerBestPlay("D2", "Dracula"); break;
+         case DOUBLE_BACK_3: registerBestPlay("D3", "Dracula"); break;
+         case DOUBLE_BACK_4: registerBestPlay("D4", "Dracula"); break;
+         case DOUBLE_BACK_5: registerBestPlay("D5", "Dracula"); break;
+      }
    }
-   #endif
-   //free used memory
 }
 
 static LocationID drac_nextLocation(DracView gameState, LocationID destination) {
+   #ifdef DEBUG
+   printf("drac_nextLocation\n");
+   #endif
    int myLocation = whereIs(gameState, PLAYER_DRACULA);
    int nextLocation;
-
+   int numLocations;
    LocationID *path = malloc(sizeof(LocationID) * NUM_MAP_LOCATIONS);
-   TransportID *tran = malloc(sizeof(TransportID) * NUM_MAP_LOCATIONS);
-   shortestPath(path, myLocation, destination, FALSE, tran);
+   LocationID exception[NUM_MAP_LOCATIONS] = {0};
+   exception[ST_JOSEPH_AND_ST_MARYS] = 1;
+   path = conditionalvertex(exception, &numLocations, myLocation, 0, TRUE, FALSE, FALSE);
    nextLocation = path[0];
    free(path);
-   free(tran);
    return nextLocation;
 }
 
 static LocationID drac_idealPlace(DracView gameState) {
+   #ifdef DEBUG
+   printf("drac_idealPlace\n");
+   #endif
    int steps[NUM_MAP_LOCATIONS] = {0};
    int i = 0, max = 0;
    LocationID idealPlace = UNKNOWN_LOCATION;
@@ -91,43 +109,24 @@ static LocationID drac_idealPlace(DracView gameState) {
    return places[numRandom];
 }
 */
+
+//Beta update: Rewrite with drac_autoHIDX
 static LocationID drac_autoNextMove(DracView gameState) {
-   LocationID myLocation = whereIs(gameState, PLAYER_DRACULA);
+   #ifdef DEBUG
+   printf("drac_autoNextMove\n");
+   #endif
+   LocationID *myTrail = malloc(sizeof(LocationID) * TRAIL_SIZE);
+   giveMeTheTrail(gameState, PLAYER_DRACULA, myTrail);
+   LocationID myLocation = myTrail[0];
    LocationID idealDes = drac_nextLocation(gameState, drac_idealPlace(gameState));
    LocationID finalDes;
-   LocationID *placeICanReach = malloc(sizeof(LocationID) * NUM_MAP_LOCATIONS);
-   int numLocations, i, isLegal = FALSE;
-   #ifdef DEBUG
-   printf("idealPlace = %d\n", idealDes);
-   printf("ideal_legal? = %d\n", drac_isLegalMove(gameState, idealDes));
-   #endif
-   if (drac_isLegalMove(gameState, idealDes)) {
-      finalDes = idealDes;
-   } else {
-      //I don't want to go to the sea for some reason!
-      Drac_whereCanIGo(placeICanReach, &numLocations, myLocation, TRUE, FALSE);
-      for (i = 0; i < numLocations && isLegal == FALSE; i++) {
-         finalDes = placeICanReach[i];
-         isLegal = drac_isLegalMove(gameState, finalDes);
-      }
-      //But if i have to go, then i go for it!
-      if (isLegal == FALSE) {
-         Drac_whereCanIGo(placeICanReach, &numLocations, myLocation, TRUE, TRUE);
-         for (i = 0; i < numLocations && isLegal == FALSE; i++) {
-            finalDes = placeICanReach[i];
-            printf("%d -> ", finalDes);
-            isLegal = drac_isLegalMove(gameState, finalDes);
-         }
-      }
-   #ifdef DEBUG
-   printf("finalPlace = %d\n", finalDes);
-   printf("final_legal? = %d\n", drac_isLegalMove(gameState, finalDes));
-   #endif
+   finalDes = drac_autoHIDX(myTrail, idealDes);
+   if (finalDes == ERROR) {
+      finalDes = drac_drunk(myTrail, myLocation);
    }
-   free(placeICanReach);
    return finalDes;
 }
-
+/*
 static int drac_duplicated(LocationID trail[TRAIL_SIZE]) {
    int i, j, duplicate = 0;
    for (i = 0; i < TRAIL_SIZE-1; i++) {
@@ -138,7 +137,9 @@ static int drac_duplicated(LocationID trail[TRAIL_SIZE]) {
       }
    }
    #ifdef DEBUG
+   #ifdef DEBUG
    printf("duplicate = %d\n", duplicate);
+   #endif
    #endif
    return duplicate;
 }
@@ -158,12 +159,17 @@ static int drac_isLegalMove(DracView gameState, LocationID destination) {
       isLegal = FALSE;
    }
    #ifdef DEBUG
+   #ifdef DEBUG
    printf("\nisLegal = %d\n", isLegal);
+   #endif
    #endif
    return isLegal;
 }
-
+*/
 static void map_howManyStep(DracView gameState, int steps[NUM_MAP_LOCATIONS]) {
+   #ifdef DEBUG
+   printf("map_howManyStep\n");
+   #endif
    LocationID hunterLocation[NUM_HUNTER];
    int hunterSteps[NUM_HUNTER][NUM_MAP_LOCATIONS];
    int i, j;
@@ -184,4 +190,103 @@ static void map_howManyStep(DracView gameState, int steps[NUM_MAP_LOCATIONS]) {
    free(path);
    free(tran);
 }
+//This function is not yet completed
+static LocationID drac_hasHI(LocationID trail[TRAIL_SIZE]) {
+   #ifdef DEBUG
+   printf("drac_hasHI\n");
+   #endif
+   /*
+   int i;
+   int check = FALSE;
+   for (i = 0; i < TRAIL_SIZE && check == FALSE; i++) {
+      if (trail[i] == HIDE) {
+         check = TRUE;
+      }
+   }
+   return check;
+   */
+   return TRUE;
+}
 
+static LocationID drac_hasDX(LocationID trail[TRAIL_SIZE]) {
+   #ifdef DEBUG
+   printf("drac_hasDX\n");
+   #endif
+   int i, j;
+   int check = FALSE;
+   for (i = 0; i < TRAIL_SIZE; i++) {
+   }
+   for (i = 0; i < TRAIL_SIZE - 1 && check == FALSE; i++) {
+      for (j = i + 1; j < TRAIL_SIZE && check == FALSE; j++) {
+         if (trail[i] == trail[j] && trail[i] != -1 && trail[j] != -1) {
+            check = TRUE;
+         }
+      }
+   }
+   return check;
+}
+
+static LocationID drac_autoHIDX(LocationID trail[TRAIL_SIZE], LocationID input) {
+   #ifdef DEBUG
+   printf("drac_autoHIDX\n");
+   #endif
+   int i, wantHide = FALSE, wantDoubleback = FALSE;
+   LocationID returnLocation = UNASSIGNED;
+   LocationID testTrail[TRAIL_SIZE];
+   //Routine: 1-Step: Can I use HIDE?
+   //         2-Step: Otherwise I will use DOUBLE_BACK_X
+   //         3-Step: If not, I will return ERROR (Job should be done by islegal)
+   
+   //Shifting the trail -1->
+   testTrail[0] = input;
+   for (i = 1; i < 6; i++) {
+      testTrail[i] = trail[i-1];
+      if (testTrail[i] == input) {
+         wantDoubleback = DOUBLE_BACK_0 + i;
+      }
+   }
+   if (testTrail[1] == input) {
+      wantHide = TRUE;
+   }
+
+   //Directly pass the location
+   if (wantHide == FALSE && wantDoubleback == FALSE) {
+      returnLocation = input;
+   }
+   //Check: Can i use HIDE?
+   else if (wantHide != FALSE && !drac_hasHI(trail)) {
+      returnLocation = HIDE;
+   } 
+   //Check: Can i use DOUBLE_BACK_X
+   else if (wantDoubleback != FALSE && !drac_hasDX(trail)) {
+      returnLocation = wantDoubleback;
+   }
+   //Warning: This is an illegal move
+   else {
+      returnLocation = ERROR;
+   }
+   return returnLocation;
+}
+
+static LocationID drac_drunk(LocationID trail[TRAIL_SIZE], LocationID currentLocation) {
+   #ifdef DEBUG
+   printf("drac_drunk\n");
+   #endif
+   int i, numLocations;
+   LocationID decidedLocation = ERROR;
+   LocationID *placeICanReach = malloc(sizeof(placeICanReach) * NUM_MAP_LOCATIONS);
+   //City Search First
+   Drac_whereCanIGo(placeICanReach, &numLocations, currentLocation, TRUE, FALSE);
+   for (i = 0; i < numLocations && decidedLocation == ERROR; i++) {
+      decidedLocation = drac_autoHIDX(trail, placeICanReach[i]);
+   }
+   //Sea Search 
+   if (decidedLocation == ERROR) {
+      Drac_whereCanIGo(placeICanReach, &numLocations, currentLocation, FALSE, TRUE);
+      for (i = 0; i < numLocations && decidedLocation == ERROR; i++) {
+         decidedLocation = drac_autoHIDX(trail, placeICanReach[i]);
+      }
+   }
+   free(placeICanReach);
+   return decidedLocation;
+}

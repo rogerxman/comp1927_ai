@@ -1,2 +1,0 @@
-test: ~cs1927/bin/dryrun ass2b Makefile player.c dracula.c DracView.c GameView.c hunter.c HunterView.c Map.c Queue.c Places.c Places.h dracula.h DracView.h Game.h hunter.h Item.h Map.h Queue.h Globals.h HunterView.h GameView.h
-submit: give cs1927 ass2b Makefile player.c dracula.c DracView.c GameView.c hunter.c Map.c HunterView.c Queue.c Places.c Places.h dracula.h DracView.h Game.h hunter.h Item.h Map.h Queue.h Globals.h HunterView.h GameView.h

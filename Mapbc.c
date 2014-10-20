@@ -10,7 +10,6 @@
 #include "Queue.h"
 
 typedef struct vNode *VList;
-//static void print(LocationID *location);
 
 struct vNode {
    LocationID  v;    // ALICANTE, etc
@@ -25,8 +24,6 @@ struct MapRep {
 };
 
 static void addConnections(Map);
-static int effiBFS(LocationID curr,int rail_hops,int *array,LocationID parent[],LocationID visited[]);
-static int inSideArray(int target,int *a,int size);
 
 // Create a new empty graph (for a map)
 // #Vertices always same as NUM_PLACES
@@ -478,10 +475,8 @@ LocationID *conditionalvertex(int* exception, int *numLocations, LocationID from
          i = 0;
          for (j = 0; radius[j][0] != -1; j++){
             for (currRadius = 0; radius[j][currRadius] != -1; currRadius++){
-               if (exception[radius[j][currRadius]] != 1) {
-                  ID[i] = radius[j][currRadius];
-                  i++;
-               }
+            ID[i] = radius[j][currRadius];
+            i++;
             }
          }
         
@@ -505,169 +500,8 @@ LocationID *conditionalvertex(int* exception, int *numLocations, LocationID from
       }
        
    }
-   if (i == 0 && road == 1) {
-      ID[i] = from;
-      i++;
-   }
-   *numLocations = i;
+   ID[i] = from;
+   *numLocations = ++i;
    disposeMap(m);
    return ID;
-}
-
-int aobs(LocationID from, LocationID to,int rail_hops,LocationID *path)
-{
-   int i = 0;
-   int j = 0;
-   LocationID visited[NUM_MAP_LOCATIONS] = {0};
-   LocationID parent[NUM_MAP_LOCATIONS];
-   for (i = 0; i < NUM_MAP_LOCATIONS; i++) parent[i] = -1;
-    Map m = newMap();
-   
-   LocationID location[NUM_MAP_LOCATIONS][NUM_MAP_LOCATIONS];
-   for (i = 0; i < NUM_MAP_LOCATIONS; i++){
-      for (j = 0; j < NUM_MAP_LOCATIONS; j++){
-         location[i][j] = -1;
-      }
-   }
-   int currnum = 1;
-   int nextnum = 0;
-   location[0][0] = from;
-   int radius = 0;
-   while (!inSideArray(to,location[radius],currnum)){
-       i = 0;
-       nextnum = 0;
-       while (i < currnum) { 
-         nextnum += effiBFS(location[radius][i],rail_hops,location[radius+1]+nextnum,parent,visited);
-         i++;
-       }
-       rail_hops = (rail_hops+1)%4;
-       currnum = nextnum;
-       radius++;  
-   }
-   
-    parent[from] = -1;
-    int nLocations;
-    int currv = to;
-    for (nLocations = 0; parent[currv] != -1; currv = parent[currv]){
-       nLocations++;
-    }
-  
-    int nOfStations = nLocations+1;
-    int par;//parent
-    currv = to;
-    while (parent[currv] != -1) {
-       path[nLocations] = currv;
-       par = parent[currv];
-       currv = par;
-       nLocations--;
-    }
-    path[0] = currv;
-    disposeMap(m);
-    return nOfStations;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-static int effiBFS(LocationID curr,int rail_hops,int *array,LocationID parent[],LocationID visited[])
-{
-    int numa = 0;
-    int numb = 0;
-    int numc = 0;
-    int j;
-
-    LocationID exception[NUM_MAP_LOCATIONS] = {0}; 
-    LocationID *a = conditionalvertex(exception,&numa,curr,0,1,0,0);
-    LocationID *b = conditionalvertex(exception,&numb,curr,0,0,0,1);
-    LocationID *c = conditionalvertex(exception,&numc,curr,rail_hops,0,1,0); 
-
-    numa--;
-    numb--;
-    numc--;
-  
-    for (j = 0; numa >= 0; j++){
-        if  (!visited[a[numa]]){
-       	   array[j] = a[numa--];
-       	   visited[array[j]] = 1;
-       	   parent[array[j]] = curr;
-        }	else{
-            numa--;
-        	   j--;
-        }
-    }
-    
-    for (; numb >= 0; j++){
-        if  (!visited[b[numb]]){
-       	   array[j] = b[numb--];
-       	   visited[array[j]] = 1;
-       	   parent[array[j]] = curr;
-        }	else{
-            numb--;
-        	   j--;
-        }
-    }
-
-    for (; numc >= 0; j++){
-        if (!visited[c[numc]]){
-       	  array[j] = c[numc--];
-       	  visited[array[j]] = 1;
-       	  parent[array[j]] = curr;
-        }  else{
-           numc--;
-           j--;
-        }
-    }
-    int numLocations =  j;
-    free(a);
-    free(b);
-    free(c);
-    return numLocations;
-}
-
-static int inSideArray(int target,int *a,int size){
-   int i;
-   int tobereturn = 0;
-   for (i = 0; i < size; i++){
-      if (target == a[i]) tobereturn = 1;
-   }
-   return tobereturn;
-}
-
-//for debugging
-/*static void print(LocationID *location){
-   int i;
-   for (i = 0; i < 71; i++) printf("%d ",location[i]);
-   printf("\n");
-}*/
-
-//Roger 10/16/2014
-void Drac_whereCanIGo(LocationID *canGo, int *nCanGo, LocationID from, int road, int sea) {
-   int pos = 0, num = 0;
-   Map m = newMap();
-   VList current;
-   current = m->connections[from];
-   for(; current != NULL; current = current->next) {
-      if (current->v != ST_JOSEPH_AND_ST_MARYS) {
-         if (road == 1 && current->type == ROAD) {
-            canGo[pos] = current->v;
-            pos++;
-            num++;
-         } else if (sea == 1 && current->type == BOAT) {
-            canGo[pos] = current->v;
-            pos++;
-            num++;
-         }
-      }
-   }
-   *nCanGo = num;
 }

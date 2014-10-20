@@ -380,36 +380,38 @@ static void update_nTraps(GameView g, char* stringTemp) {
    int i;
    PlayerID player = get_playerID(stringTemp);
    LocationID location = get_locationID(stringTemp);
-   if (player == PLAYER_DRACULA) {
-      // Trap placed
-      if (stringTemp[3] == 'T') {
-         assert(g->nTraps[location] < 3);
-         g->nTraps[location]++;
-      }
-      // Trap has left the trail
-      if (stringTemp[5] == 'M') {
-         LocationID oldLocation = g->playerTrail[PLAYER_DRACULA][5];
-         //oldLocation can equal to -1 because at round_0 Dracula can leave a trap.
-         //Another consequence is when g->nTraps[-1]; it will modify g->score!
-         //That's funny
-         assert(oldLocation >= -1 && oldLocation <= MAX_MAP_LOCATION);
-         if (oldLocation == -1) {
-            oldLocation = 0;
+   if (location >= MIN_MAP_LOCATION && location <= MAX_MAP_LOCATION){
+      if (player == PLAYER_DRACULA) {
+         // Trap placed
+         if (stringTemp[3] == 'T') {
+            g->nTraps[location]++;
          }
-         g->nTraps[oldLocation]--;
-      }
-   } else {
-      int i;
-      for (i = 3; i < PASTPLAY_STRLEN; i++) {
-         // Trap encountered
-         if (stringTemp[i] == 'T') {
-            g->nTraps[location]--;
+         // Trap has left the trail
+         if (stringTemp[5] == 'M') {
+            LocationID oldLocation = g->playerTrail[PLAYER_DRACULA][5];
+            //oldLocation can equal to -1 because at round_0 Dracula can leave a trap.
+            //Another consequence is when g->nTraps[-1]; it will modify g->score!
+            //That's funny
+            if (oldLocation >= -1 && oldLocation <= MAX_MAP_LOCATION){
+               if (oldLocation == -1) {
+                  oldLocation = 0;
+               }
+               g->nTraps[oldLocation]--;
+            }
+         }
+      } else {
+         int i;
+         for (i = 3; i < PASTPLAY_STRLEN; i++) {
+            // Trap encountered
+            if (stringTemp[i] == 'T') {
+               g->nTraps[location]--;
+            }
          }
       }
-   }
-   for (i = 0; i < NUM_MAP_LOCATIONS; i++) {
-      if (g->nTraps[i] < 0) {
-         g->nTraps[i] = 0;
+      for (i = 0; i < NUM_MAP_LOCATIONS; i++) {
+         if (g->nTraps[i] < 0) {
+            g->nTraps[i] = 0;
+         }
       }
    }
 }
@@ -418,28 +420,30 @@ static void update_matureVampire(GameView g, char* stringTemp) {
    int i;
    PlayerID player = get_playerID(stringTemp);
    LocationID location = get_locationID(stringTemp);
-   if (player == PLAYER_DRACULA) {
-      // Update rounds before vampires mature
+   if (location >= MIN_MAP_LOCATION && location <= MAX_MAP_LOCATION){
+      if (player == PLAYER_DRACULA) {
+         // Update rounds before vampires mature
+         for (i = 0; i < NUM_MAP_LOCATIONS; i++) {
+            if (g->matureVampire[i] > 0) {
+               g->matureVampire[i]--;
+            }
+         }
+         // Immature vampire placed
+         if (stringTemp[4] == 'V') {
+            g->matureVampire[location] = 6;
+         }
+      } else {
+         for (i = 3; i < PASTPLAY_STRLEN; i++) {
+            // Immature vampire encountered
+            if (stringTemp[i] == 'V') {
+               g->matureVampire[location] = 0;
+            }
+         }
+      }
       for (i = 0; i < NUM_MAP_LOCATIONS; i++) {
-         if (g->matureVampire[i] > 0) {
-            g->matureVampire[i]--;
+         if (g->matureVampire[i] < 0) {
+            g->matureVampire[i] = 0;
          }
-      }
-      // Immature vampire placed
-      if (stringTemp[4] == 'V') {
-         g->matureVampire[location] = 6;
-      }
-   } else {
-      for (i = 3; i < PASTPLAY_STRLEN; i++) {
-         // Immature vampire encountered
-         if (stringTemp[i] == 'V') {
-            g->matureVampire[location] = 0;
-         }
-      }
-   }
-   for (i = 0; i < NUM_MAP_LOCATIONS; i++) {
-      if (g->matureVampire[i] < 0) {
-         g->matureVampire[i] = 0;
       }
    }
 }

@@ -6,8 +6,13 @@
 #include "Game.h"
 #include "HunterView.h"
 #include <time.h>
+
+#define NEW_CITY_MAX_TRIES 25
+
 static char *doubleBack(int i, LocationID trail[], HunterView gameState);
-static char *randomCity(HunterView gameState);
+static char *newCity(HunterView gameState, PlayerID player, int turnLimit);
+static int getAdjacentCities(HunterView gameState, PlayerID player, LocationID adjacentCities[]);
+static char *randomCity(HunterView gameState, PlayerID player);
 //static void  print(int *a);
 
 void decideHunterMove(HunterView gameState) {
@@ -15,7 +20,6 @@ void decideHunterMove(HunterView gameState) {
     giveMeTheTrail(gameState, PLAYER_DRACULA, trail);
     PlayerID hunterId = whoAmI(gameState);
     LocationID currentLocation = whereIs(gameState, hunterId);
-
     // Game just started... get a starting position
     if (currentLocation == UNKNOWN_LOCATION) {
         switch (hunterId) {
@@ -42,8 +46,12 @@ void decideHunterMove(HunterView gameState) {
                 // It's a location... follow him!
                 LocationID path[NUM_MAP_LOCATIONS] = {0};
                 efficientPath (gameState,path,trail[known]);
-                int ID = path[1];
-                destination = idToabbrev(ID);
+                // we have reached the city where dracula was, so to others
+                 if (currentLocation == path[0]){
+                    destination = newCity(gameState, whoAmI(gameState), TRAIL_SIZE);;
+                 }  else{
+                    destination = idToabbrev(path[1]); 
+                 }               
             } else {
                 // It's a doubleback!
                 switch (trail[known]){
@@ -52,62 +60,127 @@ void decideHunterMove(HunterView gameState) {
                     case DOUBLE_BACK_3: known+=3; destination = doubleBack(known, trail, gameState);break;
                     case DOUBLE_BACK_4: known+=4; destination = doubleBack(known, trail, gameState);break;
                     case DOUBLE_BACK_5: known+=5; destination = doubleBack(known, trail, gameState);break;
-                    default : destination = randomCity(gameState);
+                    default : destination = newCity(gameState, hunterId, TRAIL_SIZE);
                 }
             }
         } else {
             // Cannot find dracula, move to random city
-            destination = randomCity(gameState);
+            destination = newCity(gameState, hunterId, TRAIL_SIZE);
         }
 
         // Register move
-        registerBestPlay(destination,"I'm on holiday in Geneva");
-    }         
+        registerBestPlay(destination,"I found you HaHaHaHa~");
+    }
 }
 
-static char *doubleBack(int i, LocationID trail[],HunterView gameState) {
+static char *doubleBack(int i, LocationID trail[], HunterView gameState) {
    char * destination;
+   PlayerID hunterId = whoAmI(gameState);
+    LocationID currentLocation = whereIs(gameState, hunterId);
+   LocationID path[NUM_MAP_LOCATIONS] = {0};
+   
    if (i >= TRAIL_SIZE){
-      destination = randomCity(gameState);
+      destination = newCity(gameState, whoAmI(gameState), TRAIL_SIZE);
    } else {
+// found dracula again
       if (trail[i] >= MIN_MAP_LOCATION && trail[i] <= MAX_MAP_LOCATION){
-         destination = idToabbrev(trail[i]);
+         efficientPath(gameState,path,trail[i]);
+         if (currentLocation == path[0]){
+            destination = newCity(gameState, whoAmI(gameState), TRAIL_SIZE);;
+         }  else{
+            destination = idToabbrev(path[1]); 
+         }      
       }  else{
-         destination = randomCity(gameState);
+         destination = newCity(gameState, whoAmI(gameState), TRAIL_SIZE);
       }
    }
    return destination;
 }
 
-static char *randomCity(HunterView gameState) {
-    int numRandomRoad = 0;
-    int numRandomRail = 0;
-    int numRandomSea = 0;
-    PlayerID player = whoAmI(gameState);
-    LocationID *randomRoads = whereCanPlayerGo(gameState, &numRandomRoad, player, 1, 0, 0);
-    LocationID *randomRails = whereCanPlayerGo(gameState, &numRandomRail, player, 0, 1, 0);
-    LocationID *randomSeas = whereCanPlayerGo(gameState, &numRandomSea, player, 0, 0, 1);
+static char *newCity(HunterView gameState, PlayerID player, int turnLimit) {
+    // turnLimit:
+    // If you just want any city that was not your previous city, turnLimit = 1 (turn ago)
+    // So if you want a new city that you have not been to in the past 3 turns.. then turnLimit = 3 (turns ago)
+    LocationID trail[TRAIL_SIZE];
+    giveMeTheTrail(gameState, player, trail);
 
-    int numTotalRandom = numRandomRoad + numRandomRail + numRandomSea;
-    LocationID randomCities[NUM_MAP_LOCATIONS] = {0};
-    int i;
-    for (i = 0; i < numTotalRandom; i++) {
-        if (numRandomRoad > 0) {
-            randomCities[i] = randomRoads[--numRandomRoad];
-            //printf("[ROAD] Added %s to %d\n", idToName(randomRoads[numRandomRoad]), i);
-        } else if (numRandomRail > 0) {
-            randomCities[i] = randomRails[--numRandomRail];
-            //printf("[RAIL] Added %s to %d\n", idToName(randomRails[numRandomRail]), i);
-        } else if (numRandomSea > 0) {
-            randomCities[i] = randomSeas[--numRandomSea];
-            //printf("[SEAS] Added %s to %d\n", idToName(randomSeas[numRandomSea]), i);
+    if (turnLimit > TRAIL_SIZE) {
+        turnLimit = TRAIL_SIZE;
+    }
+
+    LocationID adjacentCities[NUM_MAP_LOCATIONS] = {0};
+    int numLocations = getAdjacentCities(gameState, player, adjacentCities);
+
+    char *city = NULL;
+    int tries = 0;
+    srand(time(NULL));
+    // Find new city while we haven't passed max tries
+    while (city == NULL && tries < NEW_CITY_MAX_TRIES) {
+        // Get random index
+        int random = rand()%numLocations;
+        int visited = FALSE;
+        int i;
+        // Check if we 'visited' that city already
+        for (i = 0; i < turnLimit; i++) {
+            if (adjacentCities[random] == trail[i]) {
+                visited = TRUE;
+            }
+        }
+        if (!visited) {
+            // Found a new city
+            city = idToabbrev(adjacentCities[random]);
+        } // else try again
+        tries++;
+    }
+
+    if (city == NULL) {
+        // Cannot find any new cities
+        if (turnLimit > 1) {
+            // Continue to try find a new city, but with 1 less turnLimit
+            city = newCity(gameState, player, turnLimit - 1);
+        } else {
+            // Cannot find anything, just go to random city
+            city = randomCity(gameState, player);
         }
     }
 
+    return city;
+}
+
+static char *randomCity(HunterView gameState, PlayerID player) {
+    LocationID adjacentCities[NUM_MAP_LOCATIONS] = {0};
+    int numLocations = getAdjacentCities(gameState, player, adjacentCities);
+
     srand(time(NULL));
-    int random = rand()%numTotalRandom;
-    char *selectedCity = idToabbrev(randomCities[random]);
+    int random = rand()%numLocations;
+    char *selectedCity = idToabbrev(adjacentCities[random]);
     return selectedCity;
+}
+
+static int getAdjacentCities(HunterView gameState, PlayerID player, LocationID adjacentCities[]) {
+    int numAdjacentRoad = 0;
+    int numAdjacentRail = 0;
+    int numAdjacentSea = 0;
+    LocationID *adjacentRoads = whereCanPlayerGo(gameState, &numAdjacentRoad, player, 1, 0, 0);
+    LocationID *adjacentRails = whereCanPlayerGo(gameState, &numAdjacentRail, player, 0, 1, 0);
+    LocationID *adjacentSeas = whereCanPlayerGo(gameState, &numAdjacentSea, player, 0, 0, 1);
+
+    int numTotalAdjacent = numAdjacentRoad + numAdjacentRail + numAdjacentSea;
+    int i;
+    for (i = 0; i < numTotalAdjacent; i++) {
+        if (numAdjacentRoad > 0) {
+            adjacentCities[i] = adjacentRoads[--numAdjacentRoad];
+            //printf("[ROAD] Added %s to %d\n", idToName(adjacentRoads[numAdjacentRoad]), i);
+        } else if (numAdjacentRail > 0) {
+            adjacentCities[i] = adjacentRails[--numAdjacentRail];
+            //printf("[RAIL] Added %s to %d\n", idToName(adjacentRails[numAdjacentRail]), i);
+        } else if (numAdjacentSea > 0) {
+            adjacentCities[i] = adjacentSeas[--numAdjacentSea];
+            //printf("[SEAS] Added %s to %d\n", idToName(adjacentSeas[numAdjacentSea]), i);
+        }
+    }
+
+    return numTotalAdjacent;
 }
 
 /*static void  print (int *a){

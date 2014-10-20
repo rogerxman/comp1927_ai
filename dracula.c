@@ -26,6 +26,10 @@ static int drac_isLegalMove(DracView gameState, LocationID destination);
 static void map_howManyStep(DracView gameState, int steps[NUM_MAP_LOCATIONS]);
 
 //UPDATE: SHIT THAT BOAT AND SEA, FREAKING CONFUSING!
+//UPDATE: BETA
+//STRATEGE: ENABLE HI D1 D2 D3 D4 D5
+static LocationID drac_hasHI(LocationID trail[TRAIL_SIZE]);
+static LocationID drac_hasDX(LocationID trail[TRAIL_SIZE]);
 
 void decideDraculaMove(DracView gameState)
 {
@@ -97,7 +101,6 @@ static LocationID drac_autoNextMove(DracView gameState) {
    LocationID finalDes;
    LocationID *placeICanReach = malloc(sizeof(LocationID) * NUM_MAP_LOCATIONS);
    int numLocations, i, isLegal = FALSE;
-<<<<<<< HEAD
    #ifdef DEBUG
    printf("idealPlace = %d\n", idealDes);
    printf("ideal_legal? = %d\n", drac_isLegalMove(gameState, idealDes));
@@ -125,7 +128,6 @@ static LocationID drac_autoNextMove(DracView gameState) {
    printf("final_legal? = %d\n", drac_isLegalMove(gameState, finalDes));
    #endif
    }
-=======
    //IF I CAN MOVE TO THE IDEAL PLACES
    if (drac_isLegalMove(gameState, idealDes)) {
       finalDes = idealDes;
@@ -136,7 +138,6 @@ static LocationID drac_autoNextMove(DracView gameState) {
          isLegal = drac_isLegalMove(gameState, finalDes);
          }
       }
->>>>>>> 763e2aafd92df918974e373d2fbcbd855f6386e9
    free(placeICanReach);
    return finalDes;
 }
@@ -198,3 +199,22 @@ static void map_howManyStep(DracView gameState, int steps[NUM_MAP_LOCATIONS]) {
    free(tran);
 }
 
+static LocationID drac_hasHI(LocationID trail[TRAIL_SIZE]) {
+   int i, check = FALSE;
+   for (i = 0; i < TRAIL_SIZE && check == FALSE; i++) {
+      if (trail[i] == HIDE) {
+         check = TRUE;
+      }
+   }
+   return check;
+}
+
+static LocationID drac_hasDX(LocationID trail[TRAIL_SIZE]) {
+   int i, check = FALSE;
+   for (i = 0; i < TRAIL_SIZE && check == FALSE; i++) {
+      if (trail[i] >= DOUBLE_BACK_1 && trail[i] <= DOUBLE_BACK_5) {
+         check = TRUE;
+      }
+   }
+   return check;
+}

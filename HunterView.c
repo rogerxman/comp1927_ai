@@ -96,7 +96,13 @@ int howHealthyIs(HunterView currentView, PlayerID player)
 // Get the current location id of a given player
 LocationID whereIs(HunterView currentView, PlayerID player)
 {
-    return currentView->playerTrail[player][0];
+    LocationID location;
+    if (howHealthyIs(currentView,player) <= 0){
+       location = ST_JOSEPH_AND_ST_MARYS;
+    }else {
+       location = currentView->playerTrail[player][0];
+    }
+    return location;
 }
 
 //// Functions that return information about the history of the game

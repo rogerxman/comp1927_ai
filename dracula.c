@@ -97,7 +97,6 @@ static LocationID drac_autoNextMove(DracView gameState) {
    LocationID finalDes;
    LocationID *placeICanReach = malloc(sizeof(LocationID) * NUM_MAP_LOCATIONS);
    int numLocations, i, isLegal = FALSE;
-<<<<<<< HEAD
    #ifdef DEBUG
    printf("idealPlace = %d\n", idealDes);
    printf("ideal_legal? = %d\n", drac_isLegalMove(gameState, idealDes));
@@ -125,18 +124,6 @@ static LocationID drac_autoNextMove(DracView gameState) {
    printf("final_legal? = %d\n", drac_isLegalMove(gameState, finalDes));
    #endif
    }
-=======
-   //IF I CAN MOVE TO THE IDEAL PLACES
-   if (drac_isLegalMove(gameState, idealDes)) {
-      finalDes = idealDes;
-   } else {
-      Drac_whereCanIGo(placeICanReach, &numLocations, myLocation, TRUE, TRUE);
-      for (i = 0; i < numLocations && isLegal == FALSE; i++) {
-         finalDes = placeICanReach[i];
-         isLegal = drac_isLegalMove(gameState, finalDes);
-         }
-      }
->>>>>>> 763e2aafd92df918974e373d2fbcbd855f6386e9
    free(placeICanReach);
    return finalDes;
 }
